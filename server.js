@@ -189,5 +189,33 @@ app.post('/home/pick_color', function(req, res) {
     });
 });
 
+// team_stats
+app.get('/team_stats', (req, res) => {
+  const games = 'SELECT * FROM football_games';
+  const wins = 'SELECT COUNT(*) FROM football_games WHERE home_score > visitor_score;';
+  const losses = 'SELECT COUNT(*) FROM football_games WHERE visitor_score > home_score;';
+  db.task('get-everything', task => task.batch([
+            task.any(games),
+            task.any(wins),
+            task.any(losses),
+    ]))
+    .then(info => {
+      res.render('pages/team_stats', {
+        my_title: 'Team Statistics',
+        games: info[0],
+        wins: info[1][0].count,
+        losses: info[2][0].count,
+      })
+    })
+    .catch(err => {
+      res.render('pages/team_stats', {
+        my_title: 'Team Statistics Error',
+        games: '',
+        wins: '',
+        losses: '',
+      })
+    });
+});
+
 app.listen(3000);
 console.log('3000 is the magic port');
