@@ -208,6 +208,7 @@ app.get('/team_stats', (req, res) => {
       })
     })
     .catch(err => {
+      request.flash('error', err);
       res.render('pages/team_stats', {
         my_title: 'Team Statistics Error',
         games: '',
@@ -215,6 +216,60 @@ app.get('/team_stats', (req, res) => {
         losses: '',
       })
     });
+});
+
+// player info
+app.get('/player_info', (req, res) => {
+  const players = 'SELECT * FROM football_players';
+
+  db.any(players)
+    .then(rows => {
+      res.render('pages/player_info', {
+        my_title: 'Player Information',
+        players: rows,
+        player_info: '',
+      })
+    })
+    .catch(err => {
+        request.flash('error', err);
+        response.render('pages/home', {
+          my_title: 'Player Information Error',
+          players: '',
+          player_info: '',
+        })
+    });
+});
+
+// Get player information
+app.get('/player_info/post', (req, res) => {
+  const player = req.query.player_choice;
+  if (player != 'Select Player') {
+    const players = 'SELECT * FROM football_players';
+    const pinfo = `SELECT * FROM football_players WHERE id = ${player}`;
+    const gameNumber = `SELECT COUNT(*) FROM football_games WHERE ${player} = ANY(players)`;
+
+    db.task('get-everything', task => task.batch([
+      task.any(players),
+      task.any(pinfo),
+      task.any(gameNumber),
+    ]))
+      .then(info => {
+        info[1][0].totalGames = info[2][0].count;
+        res.render('pages/player_info', {
+          my_title: info[1][0].name,
+          players: info[0],
+          player_info: info[1][0],
+        })
+      })
+      .catch(err => {
+        request.flash('error', err);
+        response.render('pages/home', {
+          my_title: 'Player Information Error',
+          players: '',
+          player_info: '',
+        })
+      });
+  }
 });
 
 app.listen(3000);
